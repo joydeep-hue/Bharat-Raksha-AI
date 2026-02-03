@@ -1,0 +1,6 @@
+{
+  "version": "1.0",
+  "update_url": "https://github.com/joydeep-hue/Bharat-Raksha-AI/releases/latest/download/app.apk",
+  "changelog": "Added SMS scanning, voice alerts, bug fixes",
+  "mandatory": false
+}
