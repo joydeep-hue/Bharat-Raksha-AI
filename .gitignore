@@ -5,10 +5,9 @@
 
 # Log files
 *.log
-protection_log.txt
-scam_alerts.txt
-scam_reports.txt
-sms_active.txt
+*.txt
+!requirements.txt
+!README.md
 
 # Python cache
 __pycache__/
