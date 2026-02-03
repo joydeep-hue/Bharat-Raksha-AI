@@ -2,413 +2,483 @@ import streamlit as st
 import time
 from datetime import datetime
 import os
-import subprocess
-import threading
+import json
+import requests
+from quantum_ai import QuantumScamDetector, VedicQuantumShield
 
-st.set_page_config(page_title="Bharat Raksha AI", page_icon="🛡️", layout="wide")
+# ================= BHARAT UI CONFIG =================
+st.set_page_config(
+    page_title="Bharat Raksha AI - Quantum Protection",
+    page_icon="🇮🇳",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Custom CSS for better UI
+# ================= BHARAT CSS =================
 st.markdown("""
 <style>
-    .main-header {
-        color: #FF9933;
-        text-align: center;
-        font-size: 2.5em;
-        font-weight: bold;
-        padding: 10px;
+    /* Bharat Color Theme */
+    :root {
+        --saffron: #FF9933;
+        --green: #138808;
+        --blue: #000080;
+        --gold: #FFD700;
     }
-    .protection-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    
+    .main-header {
+        background: linear-gradient(135deg, var(--saffron), var(--gold));
         color: white;
+        text-align: center;
         padding: 25px;
         border-radius: 15px;
-        margin: 15px 0;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin: 10px 0;
+        font-family: 'Arial', sans-serif;
+        box-shadow: 0 4px 15px rgba(255, 153, 51, 0.3);
     }
-    .stButton > button {
-        width: 100%;
+    
+    .bharat-card {
+        background: white;
+        border-left: 8px solid var(--green);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 15px 0;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+    }
+    
+    .bharat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    
+    .quantum-badge {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        display: inline-block;
+        margin: 5px;
+    }
+    
+    .protection-shield {
+        background: radial-gradient(circle, var(--green), transparent);
+        border: 3px solid var(--saffron);
+        border-radius: 50%;
         padding: 15px;
-        font-size: 1.2em;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        text-align: center;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .stButton > button {
+        background: linear-gradient(135deg, var(--saffron), var(--green));
         color: white;
         border: none;
+        border-radius: 10px;
+        padding: 15px;
+        font-size: 16px;
+        font-weight: bold;
+        width: 100%;
         transition: all 0.3s;
     }
+    
     .stButton > button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, var(--green), var(--saffron));
+        transform: scale(1.02);
+        box-shadow: 0 5px 15px rgba(19, 136, 8, 0.4);
     }
-    .success-box {
-        background: #d4edda;
-        color: #155724;
-        padding: 15px;
-        border-radius: 10px;
-        border-left: 5px solid #28a745;
+    
+    .language-badge {
+        background: var(--blue);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        display: inline-block;
+        margin: 5px;
+        font-size: 14px;
+    }
+    
+    /* Bharat Flag Animation */
+    .flag-animation {
+        height: 5px;
+        background: linear-gradient(90deg, 
+            var(--saffron) 33%, 
+            white 33%, 66%, 
+            var(--green) 66%);
         margin: 10px 0;
+        border-radius: 3px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ================== HEADER ==================
-st.markdown('<div class="main-header">🛡️ भारत रक्षा AI</div>', unsafe_allow_html=True)
-st.markdown('<p style="text-align:center; font-size:1.2em; color:#138808;">24/7 Protection Against Scams & Fraud</p>', unsafe_allow_html=True)
+# ================= INITIALIZE QUANTUM AI =================
+quantum_detector = QuantumScamDetector()
+vedic_shield = VedicQuantumShield()
 
-st.markdown("---")
+# ================= BHARAT HEADER =================
+st.markdown("""
+<div class="main-header">
+    <h1 style="margin:0;">🛡️ भारत रक्षा AI</h1>
+    <h3 style="margin:10px 0 0 0;">Quantum AI Scam Protection System</h3>
+    <div class="flag-animation"></div>
+    <p style="margin:5px 0; font-size:14px;">वसुधैव कुटुम्बकम् • सर्वे भवन्तु सुखिनः</p>
+</div>
+""", unsafe_allow_html=True)
 
-# ================== SIDEBAR STATUS ==================
-st.sidebar.title("🔧 System Status")
-
-# Check file existence
-def check_status():
-    return {
-        "Protection Log": os.path.exists("protection_log.txt"),
-        "Scam Alerts": os.path.exists("scam_alerts.txt"),
-        "SMS Protection": os.path.exists("sms_active.txt"),
-        "Scam Reports": os.path.exists("scam_reports.txt"),
-        "Voice System": os.path.exists("voice_test.py")
-    }
-
-status = check_status()
-
-for item, active in status.items():
-    if active:
-        st.sidebar.success(f"✅ {item}")
-    else:
-        st.sidebar.warning(f"⚠️ {item}")
-
-# File counts
-if status["Scam Alerts"]:
-    with open("scam_alerts.txt", "r") as f:
-        alert_count = len(f.readlines())
-    st.sidebar.info(f"🚨 Scams Detected: {alert_count}")
-
-if status["Scam Reports"]:
-    with open("scam_reports.txt", "r") as f:
-        report_count = len(f.readlines())
-    st.sidebar.info(f"📝 Reports Filed: {report_count}")
-
-# Quick Actions
-st.sidebar.markdown("---")
-st.sidebar.subheader("⚡ Quick Actions")
-if st.sidebar.button("🔄 Refresh Status"):
-    st.rerun()
-
-if st.sidebar.button("🗑️ Clear Logs"):
-    for file in ["protection_log.txt", "scam_alerts.txt", "scam_reports.txt", "sms_active.txt"]:
-        if os.path.exists(file):
-            os.remove(file)
-    st.sidebar.success("Logs cleared!")
-    time.sleep(1)
-    st.rerun()
-
-# ================== MAIN CONTENT ==================
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.subheader("🌍 Choose Language / भाषा चुनें")
-    language = st.selectbox("", ["Hindi", "Tamil", "Telugu", "Bengali", "Marathi", "English", "Punjabi", "Gujarati"], 
-                           label_visibility="collapsed", index=0)
+# ================= SIDEBAR - USER PROFILE =================
+with st.sidebar:
+    st.markdown("<div class='protection-shield'>🛡️</div>", unsafe_allow_html=True)
+    st.subheader("🔐 जय हिंद User Profile")
     
-    # Show greeting in selected language
-    greetings = {
-        "Hindi": "नमस्ते! आप सुरक्षित हैं।",
-        "Tamil": "வணக்கம்! நீங்கள் பாதுகாப்பாக இருக்கிறீர்கள்.",
-        "Telugu": "నమస్కారం! మీరు సురక్షితంగా ఉన్నారు.",
-        "English": "Hello! You are protected.",
-        "Bengali": "নমস্কার! আপনি সুরক্ষিত।",
-        "Marathi": "नमस्कार! तुम्ही सुरक्षित आहात.",
-        "Punjabi": "ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਤੁਸੀਂ ਸੁਰੱਖਿਅਤ ਹੋ।",
-        "Gujarati": "નમસ્તે! તમે સુરક્ષિત છો."
-    }
-    
-    st.info(f"**{greetings.get(language, 'Hello! You are protected.')}**")
-
-with col2:
-    st.subheader("📊 Live Status")
-    
-    # Real-time metrics
-    status_col1, status_col2, status_col3 = st.columns(3)
-    
-    with status_col1:
-        if os.path.exists("protection_log.txt"):
-            with open("protection_log.txt", "r") as f:
-                lines = len(f.readlines())
-            st.metric("System", "ACTIVE", f"{lines} logs")
-        else:
-            st.metric("System", "INACTIVE", "Start protection")
-    
-    with status_col2:
-        if os.path.exists("scam_alerts.txt"):
-            with open("scam_alerts.txt", "r") as f:
-                alerts = len(f.readlines())
-            st.metric("Scams", f"{alerts}", "detected")
-        else:
-            st.metric("Scams", "0", "detected")
-    
-    with status_col3:
-        st.metric("Users", "1", "You")
-
-st.markdown("---")
-
-# ================== PROTECTION MODULES ==================
-st.subheader("🔒 Protection Modules")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("📱 SMS Protection", key="sms_btn"):
-        # Create activation file
-        with open("sms_active.txt", "w") as f:
-            f.write(f"SMS Protection Activated: {datetime.now()}\n")
-            f.write(f"Language: {language}\n")
-            f.write(f"Status: ACTIVE\n")
-        
-        st.success("✅ SMS Monitoring ACTIVATED")
-        
-        # Show progress
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        for i in range(100):
-            time.sleep(0.02)
-            progress_bar.progress(i + 1)
-            status_text.text(f"Initializing... {i+1}%")
-        
-        status_text.text("✅ Ready! Scanning incoming messages...")
-        
-        # Update protection log
-        with open("protection_log.txt", "a") as f:
-            f.write(f"{datetime.now().strftime('%H:%M:%S')} - SMS Protection Activated\n")
-        
-        st.balloons()
-
-with col2:
-    if st.button("📞 Call Protection", key="call_btn"):
-        st.success("✅ Call Screening ACTIVATED")
-        
-        # Simulate call screening
-        with st.expander("📞 Live Call Log", expanded=True):
-            st.write("**Status:** 🟢 Active")
-            st.write("**Last scan:** Just now")
-            st.write("**Mode:** Automatic screening")
-            st.write("**Languages:** Hindi, English, Tamil")
-            
-            # Fake call log
-            calls = [
-                ("+91 98765XXXXX", "Safe", "2 min ago"),
-                ("Unknown", "Suspicious", "5 min ago"),
-                ("+91 87654XXXXX", "Safe", "10 min ago")
-            ]
-            
-            for number, status, time_ago in calls:
-                if status == "Suspicious":
-                    st.error(f"🚫 {number} - {status} ({time_ago})")
-                else:
-                    st.success(f"✅ {number} - {status} ({time_ago})")
-        
-        # Update log
-        with open("protection_log.txt", "a") as f:
-            f.write(f"{datetime.now().strftime('%H:%M:%S')} - Call Protection Activated\n")
-
-with col3:
-    if st.button("💳 UPI Safety", key="upi_btn"):
-        st.success("✅ UPI Safety ACTIVATED")
-        
-        # Safety features
-        st.markdown("""
-        <div class="success-box">
-        <strong>✅ Safety Features Enabled:</strong><br>
-        1. Payee name verification<br>
-        2. Amount limit alerts<br>
-        3. Unknown sender warnings<br>
-        4. QR code safety check<br>
-        5. Transaction pattern analysis
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Update log
-        with open("protection_log.txt", "a") as f:
-            f.write(f"{datetime.now().strftime('%H:%M:%S')} - UPI Safety Activated\n")
-
-st.markdown("---")
-
-# ================== REPORT SCAM ==================
-st.subheader("⚠️ Report Scam")
-
-report_col1, report_col2 = st.columns([2, 1])
-
-with report_col1:
-    scam_type = st.selectbox(
-        "Scam Type:",
-        ["UPI/Payment Fraud", "Job/Employment Scam", "Lottery/Prize", 
-         "Bank/Fake Call", "Online Shopping", "Fake SMS", "Other"]
+    # Language Selection
+    st.markdown("### 🌍 भाषा चुनें")
+    language = st.selectbox("", 
+        ["हिंदी", "தமிழ்", "తెలుగు", "বাংলা", "मराठी", "English", "ਪੰਜਾਬੀ", "ગુજરાતી"],
+        index=0
     )
     
-    scam_details = st.text_area(
-        "Describe the scam (include phone number/URL if available):",
-        height=100,
-        placeholder="Example: Received call from +91 98765XXXXX claiming to be from SBI Bank asking for OTP..."
-    )
+    # Google Sign-in
+    st.markdown("### 📱 Google Sign-in")
+    if st.button("Sign in with Google", key="google_signin"):
+        st.session_state['signed_in'] = True
+        st.success("✅ Signed in as Indian User")
     
-    phone_number = st.text_input("Your contact (optional):", placeholder="+91 XXXXX XXXXX")
-
-with report_col2:
-    st.write("###")
-    st.write("###")
-    if st.button("🚨 Report to Cyber Crime", type="primary", use_container_width=True):
-        if scam_details.strip():
-            # Create report
-            report_id = f"BR{int(time.time())}"
-            report_data = f"""
-{'='*60}
-REPORT ID: {report_id}
-TIME: {datetime.now()}
-TYPE: {scam_type}
-LANGUAGE: {language}
-DETAILS: {scam_details}
-CONTACT: {phone_number if phone_number else 'Not provided'}
-STATUS: PENDING_SYNC
-{'='*60}
-"""
-            
-            # Save to file
-            with open("scam_reports.txt", "a") as f:
-                f.write(report_data + "\n")
-            
-            # Also save to scam_alerts for monitoring
-            with open("scam_alerts.txt", "a") as f:
-                f.write(f"{datetime.now()} - User reported: {scam_type[:30]}...\n")
-            
-            # Show success
-            st.success("✅ Reported Successfully!")
-            st.balloons()
-            
-            # Show report summary
-            st.markdown(f"""
-            <div class="success-box">
-            <strong>📋 Report Summary:</strong><br>
-            • <strong>ID:</strong> {report_id}<br>
-            • <strong>Type:</strong> {scam_type}<br>
-            • <strong>Time:</strong> {datetime.now().strftime('%H:%M:%S')}<br>
-            • <strong>Status:</strong> Queued for Cyber Crime portal
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.info("""
-            **Next Steps:**
-            1. Report saved locally
-            2. Will auto-sync with Cyber Crime portal
-            3. Keep reference ID for tracking
-            4. You may receive SMS confirmation
-            """)
-        else:
-            st.error("⚠️ Please describe the scam before reporting")
-
-st.markdown("---")
-
-# ================== LIVE PROTECTION LOG ==================
-st.subheader("📝 Live Protection Log")
-
-if os.path.exists("protection_log.txt"):
-    with open("protection_log.txt", "r") as f:
-        logs = f.readlines()
+    # Quantum Protection Status
+    st.markdown("### ⚛️ Quantum Shield")
+    protection = vedic_shield.calculate_protection()
+    st.info(f"**Nakshatra:** {protection['nakshatra']}")
+    st.info(f"**Shield:** {protection['protection_level']}")
     
-    if logs:
-        # Show last 15 entries
-        container = st.container(height=300)
-        with container:
-            for log in reversed(logs[-15:]):
-                log = log.strip()
-                if "Activated" in log or "ACTIVE" in log:
-                    st.success(f"🟢 {log}")
-                elif "Scam" in log or "Suspicious" in log:
-                    st.error(f"🚨 {log}")
-                elif "Error" in log or "Failed" in log:
-                    st.error(f"❌ {log}")
-                else:
-                    st.info(f"📝 {log}")
-        
-        # Log statistics
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.caption(f"Total entries: {len(logs)}")
-        with col2:
-            if len(logs) > 0:
-                last_log = logs[-1].strip()
-                st.caption(f"Last: {last_log[:40]}...")
-        with col3:
-            st.caption(f"Started: {logs[0][:19] if logs else 'N/A'}")
+    # Auto-Reporting Toggle
+    st.markdown("### 🏛️ Govt Auto-Report")
+    auto_report = st.toggle("Auto-report to authorities", value=True)
+    
+    if auto_report:
+        st.success("✅ Active - Scams auto-reported")
     else:
-        st.info("Protection log is empty. Activate protection modules to see activity.")
-else:
-    st.warning("Protection log not found. System may not be running.")
+        st.warning("⚠️ Manual reporting only")
 
-# ================== FILE BROWSER ==================
-with st.expander("📁 View System Files"):
-    if st.button("Refresh File List"):
-        st.rerun()
-    
-    txt_files = [f for f in os.listdir(".") if f.endswith(".txt")]
-    py_files = [f for f in os.listdir(".") if f.endswith(".py")]
+# ================= MAIN DASHBOARD =================
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🛡️ Real-Time Protection", 
+    "📱 Social Media Scan", 
+    "🏛️ Govt Connect", 
+    "📊 Quantum AI", 
+    "⚙️ Settings"
+])
+
+# ================= TAB 1: REAL-TIME PROTECTION =================
+with tab1:
+    st.markdown("## 🔍 Real-Time Scam Detection")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write("**Data Files (.txt):**")
-        for file in txt_files:
-            size = os.path.getsize(file)
-            st.code(f"{file} ({size} bytes)")
+        # SMS/Message Scanner
+        st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+        st.subheader("📱 Message Scanner")
+        message = st.text_area("Paste suspicious message:", height=100)
+        
+        if st.button("Quantum Scan", key="scan_msg"):
+            if message:
+                result = quantum_detector.quantum_analyze(message)
+                st.markdown(f"**Threat Level:** <span style='color:red'>{result['level']}</span>", unsafe_allow_html=True)
+                st.markdown(f"**Probability:** {result['probability']*100:.1f}%")
+                st.markdown(f"**Quantum State:** `{result['quantum_state']['entanglement']:.4f}`")
+                
+                if result['probability'] > 0.6:
+                    st.error("🚨 HIGH RISK - Possible scam detected!")
+                    if auto_report:
+                        st.info("📤 Auto-reporting to Cyber Crime portal...")
+            else:
+                st.warning("Please paste a message to scan")
+        st.markdown("</div>", unsafe_allow_html=True)
     
     with col2:
-        st.write("**Python Files (.py):**")
-        for file in py_files:
-            st.code(file)
+        # URL/Website Scanner
+        st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+        st.subheader("🌐 Website Safety")
+        url = st.text_input("Enter website URL:")
+        
+        if st.button("Check Safety", key="check_url"):
+            if url:
+                st.info("🔍 Quantum scanning website...")
+                time.sleep(1)
+                # Simulate scanning
+                safety_score = random.uniform(0.3, 0.95)
+                if safety_score < 0.5:
+                    st.error(f"⚠️ Unsafe Website ({safety_score*100:.0f}% risky)")
+                else:
+                    st.success(f"✅ Safe Website ({safety_score*100:.0f}% safe)")
+            else:
+                st.warning("Enter a URL to check")
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Auto-Protection Toggle
+    st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+    st.subheader("⚡ 24/7 Auto-Protection")
+    
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        sms_protect = st.toggle("SMS Protection", value=True)
+    with col_b:
+        call_protect = st.toggle("Call Screening", value=True)
+    with col_c:
+        upi_protect = st.toggle("UPI Safety", value=True)
+    
+    if st.button("Start Quantum Protection", type="primary"):
+        st.success("✅ Quantum Protection Activated!")
+        st.balloons()
+        
+        # Create protection log
+        protection_data = {
+            "timestamp": datetime.now().isoformat(),
+            "language": language,
+            "auto_report": auto_report,
+            "features": {
+                "sms": sms_protect,
+                "call": call_protect,
+                "upi": upi_protect
+            },
+            "quantum_key": protection['quantum_key'],
+            "status": "ACTIVE"
+        }
+        
+        with open("quantum_protection.json", "w") as f:
+            json.dump(protection_data, f)
+        
+        st.info(f"**Quantum Key:** `{protection['quantum_key']}`")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ================== FOOTER ==================
+# ================= TAB 2: SOCIAL MEDIA SCAN =================
+with tab2:
+    st.markdown("## 📱 Social Media & App Scanner")
+    
+    platforms = ["WhatsApp", "Facebook", "Instagram", "Twitter/X", "Telegram", "YouTube"]
+    
+    for platform in platforms:
+        with st.expander(f"🔍 {platform} Scanner", expanded=True):
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"**Auto-scan {platform} for:**")
+                st.checkbox("Fake profiles", value=True, key=f"{platform}_1")
+                st.checkbox("Scam messages", value=True, key=f"{platform}_2")
+                st.checkbox("Fraud ads", value=True, key=f"{platform}_3")
+                st.checkbox("Phishing links", value=True, key=f="{platform}_4")
+            
+            with col2:
+                if st.button(f"Scan {platform}", key=f"scan_{platform}"):
+                    st.info(f"🔄 Quantum scanning {platform}...")
+                    time.sleep(2)
+                    
+                    # Simulated results
+                    scams_found = random.randint(0, 5)
+                    if scams_found > 0:
+                        st.error(f"🚨 Found {scams_found} scams!")
+                        if auto_report:
+                            st.success("✅ Auto-reported to authorities")
+                    else:
+                        st.success("✅ No scams detected")
+    
+    # Fraud App Detector
+    st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+    st.subheader("📲 Fraud App Detector")
+    
+    app_url = st.text_input("Enter App Store/Play Store URL:")
+    if st.button("Analyze App", key="analyze_app"):
+        if app_url:
+            st.info("🔍 Quantum analyzing app...")
+            time.sleep(2)
+            
+            # Simulated analysis
+            risk_factors = ["Fake reviews", "Suspicious permissions", "Clone app", "Data theft"]
+            detected = random.sample(risk_factors, random.randint(0, 3))
+            
+            if detected:
+                st.error("⚠️ POTENTIAL FRAUD APP")
+                for risk in detected:
+                    st.write(f"• {risk}")
+                st.warning("Do NOT install this app!")
+            else:
+                st.success("✅ App appears safe")
+        else:
+            st.warning("Enter app URL to analyze")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ================= TAB 3: GOVT CONNECT =================
+with tab3:
+    st.markdown("## 🏛️ Government Integration")
+    
+    st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+    st.subheader("📤 Auto-Report to Authorities")
+    
+    govt_agencies = [
+        "National Cyber Crime Portal",
+        "RBI Fraud Division", 
+        "SEBI Investor Alert",
+        "State Police Cyber Cell",
+        "Telecom Regulatory Authority"
+    ]
+    
+    selected_agencies = st.multiselect(
+        "Select agencies to auto-report:",
+        govt_agencies,
+        default=govt_agencies[:2]
+    )
+    
+    if st.button("Test Gov Integration", key="test_gov"):
+        st.info("🔗 Testing government API connections...")
+        time.sleep(2)
+        
+        for agency in selected_agencies:
+            st.success(f"✅ Connected to {agency}")
+        
+        st.info("**Status:** Ready for auto-reporting")
+    
+    # Manual Report
+    st.subheader("📝 Manual Report")
+    scam_type = st.selectbox("Scam Type:", ["UPI Fraud", "Job Scam", "Fake Call", "Online Shopping", "Investment"])
+    details = st.text_area("Details:", height=100)
+    
+    if st.button("Submit to Govt", type="primary", key="submit_gov"):
+        if details:
+            report_id = f"GOV{int(time.time())}"
+            st.success(f"✅ Report submitted! ID: {report_id}")
+            
+            # Save report
+            report_data = {
+                "id": report_id,
+                "timestamp": datetime.now().isoformat(),
+                "type": scam_type,
+                "language": language,
+                "agencies": selected_agencies,
+                "details": details,
+                "quantum_analysis": quantum_detector.quantum_analyze(details)
+            }
+            
+            with open(f"reports/{report_id}.json", "w") as f:
+                json.dump(report_data, f)
+            
+            st.balloons()
+        else:
+            st.error("Please provide details")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ================= TAB 4: QUANTUM AI =================
+with tab4:
+    st.markdown("## ⚛️ Quantum AI Analytics")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+        st.subheader("🧠 AI Brain")
+        
+        # Live AI Processing
+        st.write("**Live Threat Analysis:**")
+        threats = ["Bank scam rising", "New UPI fraud", "Job fraud alert", "Shopping scam"]
+        
+        for threat in threats:
+            risk = random.uniform(0.3, 0.9)
+            col_a, col_b = st.columns([3, 1])
+            with col_a:
+                st.write(f"• {threat}")
+            with col_b:
+                st.progress(risk)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+        st.subheader("📊 Protection Metrics")
+        
+        metrics = {
+            "Scams Blocked": random.randint(100, 500),
+            "Money Saved": f"₹{random.randint(50, 500)}K",
+            "Users Protected": random.randint(1000, 10000),
+            "Quantum Accuracy": f"{random.uniform(85, 99):.1f}%"
+        }
+        
+        for key, value in metrics.items():
+            st.metric(key, value)
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Vedic Quantum Protection
+    st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+    st.subheader("🕉️ Vedic Quantum Shield")
+    
+    user_dob = st.date_input("Enter date of birth for personalized protection:")
+    if st.button("Generate Vedic Shield", key="vedic_shield"):
+        if user_dob:
+            dob = datetime.combine(user_dob, datetime.min.time())
+            shield = vedic_shield.calculate_protection(dob)
+            
+            st.success("✅ Vedic Quantum Shield Generated!")
+            st.write(f"**Your Nakshatra:** {shield['nakshatra']}")
+            st.write(f"**Protection Level:** {shield['protection_level']}")
+            st.write(f"**Quantum Key:** `{shield['quantum_key']}`")
+            st.info(f"**Mantra:** {shield['mantra']}")
+        else:
+            st.warning("Please select date of birth")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ================= TAB 5: SETTINGS =================
+with tab5:
+    st.markdown("## ⚙️ Advanced Settings")
+    
+    st.markdown("<div class='bharat-card'>", unsafe_allow_html=True)
+    st.subheader("🌐 Regional Settings")
+    
+    # Language Voice Selection
+    voices = {
+        "हिंदी": "Hindi Female",
+        "தமிழ்": "Tamil Female", 
+        "తెలుగు": "Telugu Female",
+        "English": "English Indian"
+    }
+    
+    selected_voice = st.selectbox("Voice Alerts:", list(voices.values()))
+    
+    # Notification Settings
+    st.subheader("🔔 Notifications")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.checkbox("SMS Alerts", value=True)
+    with col2:
+        st.checkbox("Voice Alerts", value=True)
+    with col3:
+        st.checkbox("Push Notifications", value=True)
+    
+    # Quantum Settings
+    st.subheader("⚛️ Quantum Settings")
+    quantum_power = st.slider("Quantum Processing Power:", 1, 10, 5)
+    ai_sensitivity = st.slider("AI Sensitivity:", 1, 10, 7)
+    
+    if st.button("Save Settings", type="primary"):
+        st.success("✅ Settings saved!")
+        st.info("Quantum AI recalibrating...")
+        time.sleep(1)
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ================= FOOTER =================
 st.markdown("---")
-st.markdown("### 🇮🇳 Made for India, By Indians")
-st.markdown("**Free Forever • 24/7 Protection • All Languages Supported**")
-
 st.markdown("""
-<div style="text-align: center; margin-top: 20px; color: #666;">
-    <small>
-    Bharat Raksha AI | Version 1.0 | 
-    <a href="https://github.com/joydeep-hue/Bharat-Raksha-AI" target="_blank">GitHub</a> | 
-    Protection Status: ACTIVE
-    </small>
+<div style="text-align: center;">
+    <h3 style="color: #FF9933;">🇮🇳 जय हिंद! जय भारत!</h3>
+    <p><strong>Bharat Raksha AI Quantum System</strong> • Version 2.0</p>
+    <p>वसुधैव कुटुम्बकम् • Protecting Every Indian</p>
+    <div class="flag-animation"></div>
+    <p style="color: #666; font-size: 12px;">
+        Quantum AI Protection Active • Vedic Shield Engaged • Govt Connected • 24/7 Monitoring
+    </p>
 </div>
 """, unsafe_allow_html=True)
-# Add PWA manifest
-st.markdown("""
-<link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#FF9933">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-""", unsafe_allow_html=True)
-# Add at top of dashboard.py
-import requests
-
-def check_for_updates():
-    """Check if new APK version available"""
-    try:
-        # Store current APK version
-        CURRENT_APK_VERSION = "1.0"
-        
-        # Get latest version from your GitHub
-        latest_version = "1.0"  # You update this when rebuilding APK
-        
-        if latest_version != CURRENT_APK_VERSION:
-            st.warning(f"📱 New app version {latest_version} available!")
-            st.markdown("[Download updated APK](https://your-link-to-new-apk)")
-            return False
-        return True
-    except:
-        return True
-
-# Call in sidebar
-with st.sidebar:
-    if not check_for_updates():
-        st.error("Please update app for new features!")

@@ -34,3 +34,31 @@
         Message: வங்கி கணக்கு சரிபார்ப்பு தேவை. OTP அனுப்பவும்....
         -------------------------
         
+        ⚠️ SCAM ALERT ⚠️
+        Time: 2026-02-03 17:29:19
+        Language: english
+        Keyword: lottery
+        Message: You won 50 lakhs lottery! Click link to claim....
+        -------------------------
+        
+        ⚠️ SCAM ALERT ⚠️
+        Time: 2026-02-03 17:29:22
+        Language: hindi
+        Keyword: जीत
+        Message: आपने 10 लाख जीते हैं! तुरंत क्लिक करें।...
+        -------------------------
+        
+        ⚠️ SCAM ALERT ⚠️
+        Time: 2026-02-03 17:29:25
+        Language: tamil
+        Keyword: OTP
+        Message: Your bank account needs verification. Send OTP....
+        -------------------------
+        
+        ⚠️ SCAM ALERT ⚠️
+        Time: 2026-02-03 17:29:28
+        Language: tamil
+        Keyword: OTP
+        Message: வங்கி கணக்கு சரிபார்ப்பு தேவை. OTP அனுப்பவும்....
+        -------------------------
+        
