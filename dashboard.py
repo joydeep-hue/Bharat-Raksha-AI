@@ -380,3 +380,35 @@ st.markdown("""
     </small>
 </div>
 """, unsafe_allow_html=True)
+# Add PWA manifest
+st.markdown("""
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#FF9933">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+""", unsafe_allow_html=True)
+# Add at top of dashboard.py
+import requests
+
+def check_for_updates():
+    """Check if new APK version available"""
+    try:
+        # Store current APK version
+        CURRENT_APK_VERSION = "1.0"
+        
+        # Get latest version from your GitHub
+        latest_version = "1.0"  # You update this when rebuilding APK
+        
+        if latest_version != CURRENT_APK_VERSION:
+            st.warning(f"📱 New app version {latest_version} available!")
+            st.markdown("[Download updated APK](https://your-link-to-new-apk)")
+            return False
+        return True
+    except:
+        return True
+
+# Call in sidebar
+with st.sidebar:
+    if not check_for_updates():
+        st.error("Please update app for new features!")
