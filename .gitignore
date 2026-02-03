@@ -1,27 +1,3 @@
-# Audio files
 *.mp3
-*.wav
-*.ogg
-
-# Log files
-*.log
 *.txt
-!requirements.txt
-!README.md
-
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-
-# System files
-.DS_Store
-Thumbs.db
-
-# Temp files
-*.tmp
-*.temp
-
-# Backup files
-*_backup_*
-backup_*
+*.log
